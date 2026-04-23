@@ -154,10 +154,15 @@ const InterviewPrep = () => {
         }
       />
 
-      <div className='w-9/10 container mx-auto pt-4 pb-4 px-4 md:px-0'>
-        <h2 className='text-lg font-semibold color-black'>Interview Q & A</h2>
+      <div className='w-9/10 container mx-auto pt-6 pb-10 px-4 md:px-0'>
+        <div className='flex items-center justify-between mb-5'>
+          <h2 className='text-lg font-bold text-black tracking-tight'>Interview Q &amp; A</h2>
+          <span className='text-xs text-gray-400 font-medium bg-gray-50 border border-gray-100 px-3 py-1 rounded-full'>
+            {sessionData?.questions?.length || 0} questions
+          </span>
+        </div>
         
-        <div className='grid grid-cols-12 gap-4 mt-5 mb-10'>
+        <div className='grid grid-cols-12 gap-4 mb-10'>
           <div className={`col-span-12 ${openLeanMoreDrawer ? "md:col-span-7" : "md:col-span-8"}`}>
             <AnimatePresence>
               {sessionData?.questions?.map((data, index) => {
@@ -174,8 +179,8 @@ const InterviewPrep = () => {
                       delay: index*0.1,
                       damping: 15,
                     }}
-                    layout // This ia key prop that animates position changes
-                    layoutId={`question-${data._id || index}`} // Helps framer track specific items
+                    layout
+                    layoutId={`question-${data._id || index}`}
                   >
                     <>
                       <QuestionCard
@@ -191,18 +196,18 @@ const InterviewPrep = () => {
 
                       {!isLoading && 
                         sessionData?.questions?.length == index + 1 && (
-                          <div className='flex items-center justify-center mt-5'>
+                          <div className='flex items-center justify-center mt-6 mb-4'>
                             <button 
-                              className='flex items-center gap-3 text-sm text-white font-medium bg-black px-5 py-2 mr-2 rounded text-nowrap cursor-pointer' 
+                              className='flex items-center gap-2.5 text-sm text-white font-semibold bg-black px-6 py-2.5 rounded-full hover:bg-gray-800 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 cursor-pointer shadow-md' 
                               disabled={isLoading || isUpdateLoader}
                               onClick={uploadMoreQuestions}
                             >
                               {isUpdateLoader ? (
                                 <SpinnerLoader />
                               ) : (
-                                <LuListCollapse className='text-lg'/>
+                                <LuListCollapse className='text-base'/>
                               )}{" "}
-                              Load More
+                              Load More Questions
                             </button>
                           </div>
                         )

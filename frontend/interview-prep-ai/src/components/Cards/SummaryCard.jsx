@@ -1,5 +1,5 @@
 import React from 'react'
-import { LuTrash2 } from 'react-icons/lu';
+import { LuTrash2, LuCalendar, LuBookOpen, LuBrainCircuit } from 'react-icons/lu';
 import { getInitials } from '../../utils/helper';
 
 const SummaryCard = ({
@@ -13,64 +13,82 @@ const SummaryCard = ({
     onSelect,
     onDelete,
 }) => {
-    return <div className='bg-white border border-gray-300/40 rounded-xl p-2 overflow-hidden cursor-pointer hover:shadow-xl shadow-gray-100 relative group' onClick={onSelect}>
-        <div className='rounded-lg p-4 cursor-pointer relative' style={{ background: colors.bgcolor, }}>
+    return (
+        <div
+            className='bg-white border border-gray-100 rounded-2xl overflow-hidden cursor-pointer hover:shadow-xl hover:shadow-gray-100/80 relative group card-hover transition-all duration-300'
+            onClick={onSelect}
+        >
+            {/* Colored top section */}
+            <div
+                className='rounded-t-2xl p-5 relative overflow-hidden'
+                style={{ background: colors.bgcolor }}
+            >
+                {/* Subtle noise texture */}
+                <div className="absolute inset-0 opacity-30 pointer-events-none"
+                    style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'3\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.05\'/%3E%3C/svg%3E")' }}
+                />
 
-            <div className='flex items-start'>
-                <div className='flex-shrink-0 w-12 h-12 bg-white rounded-md flex items-center justify-center mr-4'>
-                    <span className='text-lg font-semibold text-black'>
-                        {getInitials(role)}
+                <div className='flex items-start gap-3 relative z-10'>
+                    {/* Avatar */}
+                    <div className='flex-shrink-0 w-12 h-12 bg-white/90 rounded-xl flex items-center justify-center shadow-sm border border-white/60'>
+                        <span className='text-sm font-bold text-black'>
+                            {getInitials(role)}
+                        </span>
+                    </div>
+
+                    {/* Role & Topics */}
+                    <div className='flex-grow min-w-0'>
+                        <h2 className='text-[16px] font-bold text-gray-900 leading-tight truncate'>
+                            {role}
+                        </h2>
+                        <p className='text-[12px] text-gray-600 mt-0.5 line-clamp-1'>
+                            {topicsToFocus}
+                        </p>
+                    </div>
+                </div>
+
+                {/* Delete button */}
+                <button
+                    className='absolute top-3 right-3 z-20 opacity-0 group-hover:opacity-100 flex items-center gap-1.5 text-xs text-rose-500 font-medium bg-white/90 backdrop-blur-sm px-2.5 py-1.5 rounded-lg border border-rose-100 hover:border-rose-200 hover:bg-rose-50 cursor-pointer transition-all duration-200 shadow-sm'
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete();
+                    }}
+                >
+                    <LuTrash2 className="text-sm" />
+                </button>
+            </div>
+
+            {/* Card body */}
+            <div className='px-4 py-4'>
+                {/* Tags row */}
+                <div className='flex flex-wrap items-center gap-2 mb-3'>
+                    <span className='inline-flex items-center gap-1 text-[10px] font-semibold text-gray-700 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-200'>
+                        <LuBrainCircuit className="text-[10px]" />
+                        {experience} {experience == 1 ? "Yr" : "Yrs"} Exp
+                    </span>
+                    <span className='inline-flex items-center gap-1 text-[10px] font-semibold text-gray-700 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-200'>
+                        <LuBookOpen className="text-[10px]" />
+                        {questions} Q&A
+                    </span>
+                    <span className='inline-flex items-center gap-1 text-[10px] font-semibold text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-100 ml-auto'>
+                        <LuCalendar className="text-[10px]" />
+                        {lastUpdated}
                     </span>
                 </div>
 
-                {/* Content Container */}
+                {/* Description */}
+                <p className='text-[12px] text-gray-400 font-medium line-clamp-2 leading-relaxed'>
+                    {description || 'No description provided.'}
+                </p>
 
-                <div className='flex-grow'>
-                    <div className='flex justify-between items-start'>
-                        {/* Title and Skills */}
-                        <div>
-                            <h2 className='text-[17px] font-medium'>
-                                {role}
-                            </h2>
-                            <p className='text-xs text-medium text-gray-900'>
-                                {topicsToFocus}
-                            </p>
-                        </div>
-                    </div>
+                {/* Hover cta */}
+                <div className="mt-3 pt-3 border-t border-gray-50 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <span className="text-[11px] text-gray-400 font-medium">Click to practice →</span>
                 </div>
             </div>
-
-            <button className='hidden group-hover:flex items-center gap-2 text-xs text-rose-500 font-medium bg-rose-50 px-3 py-1 rounded text-nowrap border border-rose-100 hover:border-rose-200 cursor-pointer absolute top-0 right-0' 
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete();
-                }}
-            >
-                <LuTrash2 />
-            </button>
         </div>
-        
-        <div className='px-3 pb-3'>
-            <div className='flex items-center gap-3 mt-4'> 
-                <div className='text-[10px] font-medium text-black px-3 py-1 border-[0.5px] border-gray-900 rounded-full'>
-                    Experience: {experience} {experience ==1 ? "Year" : "Years"}
-                </div>
-
-                <div className='text-[10px] font-medium text-black px-3 py-1 border-[0.5px] border-gray-900 rounded-full'>
-                    {questions} Q&A
-                </div>
-
-                <div className='text-[10px] font-medium text-black px-3 py-1 border-[0.5px] border-gray-900 rounded-full'>
-                    Last Updated: {lastUpdated}
-                </div>
-            </div>
-
-            {/* Description */}
-            <p className='text-[12px] text-gray-500 font-medium line-clamp-2 mt-3'>
-                {description}
-            </p>
-        </div>
-    </div>
+    );
 };
 
 export default SummaryCard;
