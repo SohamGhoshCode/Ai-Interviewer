@@ -3,7 +3,7 @@ import HERO_IMG from "../assets/hero-img.png";
 import LOGO from "../assets/logo.svg";
 import { APP_FEATURES } from "../utils/data";
 import { useNavigate } from 'react-router-dom';
-import { LuSparkles, LuArrowRight, LuBrainCircuit, LuZap } from "react-icons/lu";
+import { LuSparkles, LuArrowRight, LuBrainCircuit, LuZap, LuMail } from "react-icons/lu";
 import Modal from '../components/Modal';
 import Login from './Auth/Login';
 import SignUp from './Auth/SignUp';
@@ -48,16 +48,26 @@ const LandingPage = () => {
               </span>
             </div>
 
-            {user ? (
-              <ProfileInfoCard />
-            ) : (
+            <div className='flex items-center gap-4'>
               <button
-                className='bg-black text-sm font-semibold text-white px-6 py-2.5 rounded-full hover:bg-gray-800 border border-black transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0'
-                onClick={() => setOpenAuthModal(true)}
+                onClick={() => navigate('/contact')}
+                className='hidden sm:flex items-center gap-1.5 text-[13px] font-semibold text-gray-400 hover:text-black transition-colors duration-200 group cursor-pointer'
               >
-                Login / Sign Up
+                <LuMail className='text-sm group-hover:scale-110 transition-transform duration-200' />
+                Contact
               </button>
-            )}
+
+              {user ? (
+                <ProfileInfoCard />
+              ) : (
+                <button
+                  className='bg-black text-sm font-semibold text-white px-6 py-2.5 rounded-full hover:bg-gray-800 border border-black transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0'
+                  onClick={() => setOpenAuthModal(true)}
+                >
+                  Login / Sign Up
+                </button>
+              )}
+            </div>
           </header>
 
           {/* ─── Hero Content ─── */}
@@ -216,10 +226,17 @@ const LandingPage = () => {
       </div>
 
       {/* ─── FOOTER ─── */}
-      <div className='text-sm bg-white text-gray-300 text-center p-6 border-t border-gray-100'>
-        <span className="text-gray-400">Made with</span>{" "}
-        <span>❤️</span>{" "}
-        <span className="text-gray-400">by ASAP! · Happy Coding</span>
+      <div className='bg-white border-t border-gray-100 px-4 py-6'>
+        <div className='w-9/10 container mx-auto flex flex-col sm:flex-row items-center justify-between gap-3'>
+          <span className='text-sm text-gray-400'>Made with ❤️ by ASAP! · Happy Coding</span>
+          <button
+            onClick={() => navigate('/contact')}
+            className='flex items-center gap-1.5 text-[13px] font-semibold text-gray-400 hover:text-black transition-colors duration-200 group cursor-pointer'
+          >
+            <LuMail className='text-sm group-hover:scale-110 transition-transform duration-200' />
+            Contact / Collaborate
+          </button>
+        </div>
       </div>
 
       {/* ─── Auth Modal ─── */}
