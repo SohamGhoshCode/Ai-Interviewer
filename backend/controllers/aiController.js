@@ -1,110 +1,92 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+/**
+ * aiController.js
+ * ─────────────────────────────────────────────────────────────────────────────
+ * All Gemini API calls go through the smart rotation client (geminiClient.js).
+ * No direct SDK calls here — quota rotation is handled transparently.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+const { callGemini } = require("../utils/geminiClient");
 const { conceptExplainPrompt, questionAnswerPrompt } = require("../utils/prompts");
 
-// Initialize Gemini with API Key from environment variables
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+/** Strip markdown code fences Gemini sometimes wraps around JSON */
+const cleanJSON = (raw) =>
+  raw
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/```$/i, "")
+    .trim();
 
-// Helper: retry with exponential backoff for 429 rate-limit errors
-const generateWithRetry = async (model, prompt, maxRetries = 3) => {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            const result = await model.generateContent(prompt);
-            return result;
-        } catch (error) {
-            const isRateLimit = error.status === 429 || (error.message && error.message.includes("429"));
-            if (isRateLimit && attempt < maxRetries) {
-                // Extract retry delay from error or use exponential backoff
-                const retryDelay = (error.errorDetails?.find(d => d["@type"]?.includes("RetryInfo"))?.retryDelay) || `${attempt * 5}s`;
-                const delayMs = (parseInt(retryDelay) || attempt * 5) * 1000;
-                console.log(`Rate limited. Retrying in ${delayMs / 1000}s (attempt ${attempt}/${maxRetries})...`);
-                await new Promise(resolve => setTimeout(resolve, delayMs + 1000)); // add 1s buffer
-            } else {
-                throw error;
-            }
-        }
-    }
-};
-
-// @desc    Generate interview questions and answers using Gemini
+// ── Generate interview questions ───────────────────────────────────────────────
 // @route   POST /api/ai/generate-questions
 // @access  Private
 const generateInterviewQuestions = async (req, res) => {
-    try {
-        const { role, experience, topicsToFocus, numberOfQuestions } = req.body;
+  try {
+    const { role, experience, topicsToFocus, numberOfQuestions } = req.body;
 
-        if (!role || !experience || !topicsToFocus || !numberOfQuestions) {
-            return res.status(400).json({ message: "Missing required fields" });
-        }
-
-        const prompt = questionAnswerPrompt(role, experience, topicsToFocus, numberOfQuestions);
-
-        // Get the model from env (falls back to gemini-2.5-flash)
-        const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-2.5-flash" });
-
-        // Generate content with retry logic
-        const result = await generateWithRetry(model, prompt);
-        const response = await result.response;
-        const rawText = response.text();
-
-        // Clean JSON response: Remove ```json and ``` patterns
-        const cleanedText = rawText
-            .replace(/^```json\s*/, "") 
-            .replace(/```$/, "") 
-            .trim(); 
-
-        // Parse and return
-        const data = JSON.parse(cleanedText);
-        res.status(200).json(data);       
-    } catch (error) {
-        console.error("Gemini Error:", error);
-        const isRateLimit = error.status === 429 || (error.message && error.message.includes("429"));
-        res.status(isRateLimit ? 429 : 500).json({ 
-            message: isRateLimit 
-                ? "API rate limit reached. Please wait a moment and try again, or upgrade your Gemini plan."
-                : "Failed to generate questions. Check if your API key is valid and has Gemini access.", 
-            error: error.message 
-        });
+    if (!role || !experience || !topicsToFocus || !numberOfQuestions) {
+      return res.status(400).json({ message: "Missing required fields" });
     }
+
+    const prompt = questionAnswerPrompt(role, experience, topicsToFocus, numberOfQuestions);
+
+    // callGemini handles model rotation + retries internally
+    const rawText = await callGemini(prompt);
+
+    const data = JSON.parse(cleanJSON(rawText));
+    res.status(200).json(data);
+  } catch (error) {
+    console.error("[aiController] generateInterviewQuestions error:", error.message);
+
+    const isQuota =
+      error.message?.includes("quota") ||
+      error.message?.includes("429") ||
+      error.message?.includes("rate limit") ||
+      error.status === 429;
+
+    res.status(isQuota ? 429 : 500).json({
+      message: isQuota
+        ? "All AI models are currently busy. Please wait a moment and try again."
+        : "Failed to generate questions. Please check your API key and try again.",
+      error: error.message,
+    });
+  }
 };
 
-// @desc    Generate explanation for an interview question
+// ── Generate concept explanation ──────────────────────────────────────────────
 // @route   POST /api/ai/generate-explanation
 // @access  Private
 const generateConceptExplanation = async (req, res) => {
-    try {
-        const { question } = req.body;
-        if (!question) {
-            return res.status(400).json({ message: "Missing required fields" });
-        }
+  try {
+    const { question } = req.body;
 
-        const prompt = conceptExplainPrompt(question);
-
-        // Get the model from env (falls back to gemini-2.5-flash)
-        const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-2.5-flash" });
-
-        // Generate content with retry logic
-        const result = await generateWithRetry(model, prompt);
-        const response = await result.response;
-        const rawText = response.text();
-
-        // Clean and parse
-        const cleanedText = rawText
-            .replace(/^```json\s*/, "")
-            .replace(/```$/, "")
-            .trim();
-
-        const data = JSON.parse(cleanedText);
-        res.status(200).json(data);
-    } catch (error) {
-        console.error("Gemini Error:", error);
-        const isRateLimit = error.status === 429 || (error.message && error.message.includes("429"));
-        res.status(isRateLimit ? 429 : 500).json({ 
-            message: isRateLimit 
-                ? "API rate limit reached. Please wait a moment and try again, or upgrade your Gemini plan."
-                : "Failed to generate explanation. Check your Gemini API Key.", 
-            error: error.message 
-        });     
+    if (!question) {
+      return res.status(400).json({ message: "Missing required fields" });
     }
+
+    const prompt = conceptExplainPrompt(question);
+
+    // callGemini handles model rotation + retries internally
+    const rawText = await callGemini(prompt);
+
+    const data = JSON.parse(cleanJSON(rawText));
+    res.status(200).json(data);
+  } catch (error) {
+    console.error("[aiController] generateConceptExplanation error:", error.message);
+
+    const isQuota =
+      error.message?.includes("quota") ||
+      error.message?.includes("429") ||
+      error.message?.includes("rate limit") ||
+      error.status === 429;
+
+    res.status(isQuota ? 429 : 500).json({
+      message: isQuota
+        ? "All AI models are currently busy. Please wait a moment and try again."
+        : "Failed to generate explanation. Please check your API key and try again.",
+      error: error.message,
+    });
+  }
 };
 
 module.exports = { generateInterviewQuestions, generateConceptExplanation };
