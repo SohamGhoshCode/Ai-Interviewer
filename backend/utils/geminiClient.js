@@ -66,16 +66,24 @@ const isQuotaError = (err) => {
  * callGemini(prompt)
  *
  * Sends `prompt` to the Gemini API using the current model in the pool.
- * Automatically rotates to the next model on quota/rate-limit errors.
+ * Automatically rotates to the next model on ANY error (quota, network,
+ * model-specific failures, empty responses, etc.).
+ *
+ * Strategy:
+ *  - Try each model in the pool sequentially, starting from currentModelIndex.
+ *  - On ANY failure: log the reason, advance to the next model, and retry.
+ *  - Only after ALL models are exhausted is an error surfaced to the caller.
+ *  - This ensures a single button click triggers the full fallback chain.
  *
  * @param {string} prompt  The full text prompt to send.
  * @returns {Promise<string>} The raw text response from Gemini.
- * @throws {Error} If all models in the pool are exhausted.
+ * @throws {Error} If every model in the pool fails.
  */
 const callGemini = async (prompt) => {
   // We allow at most MODELS.length attempts (one per model).
   const totalModels = MODELS.length;
   let attemptsLeft = totalModels;
+  let lastError = null;
 
   while (attemptsLeft > 0) {
     const modelName = MODELS[currentModelIndex];
@@ -85,38 +93,44 @@ const callGemini = async (prompt) => {
       const result = await model.generateContent(prompt);
       const rawText = result.response.text();
 
+      // Reject empty / whitespace-only responses as a failure.
+      if (!rawText || !rawText.trim()) {
+        throw new Error("Empty response from model");
+      }
+
       // ── Success ──────────────────────────────────────────────────────────
-      console.log(`[Gemini] Used model: ${modelName} | Status: OK`);
+      console.log(`[Gemini] ✓ Used model: ${modelName} | Status: OK`);
 
       // Advance index for the NEXT request (distributes load evenly).
       currentModelIndex = nextIndex(currentModelIndex);
 
       return rawText;
     } catch (err) {
-      if (isQuotaError(err)) {
-        // ── Quota hit → rotate ───────────────────────────────────────────
-        console.warn(
-          `[Gemini] Model ${modelName} hit quota. Switching to next...`
-        );
+      lastError = err;
+      const reason = isQuotaError(err) ? "quota/rate-limit" : "error";
 
-        currentModelIndex = nextIndex(currentModelIndex);
-        attemptsLeft--;
+      // ── Any failure → rotate to next model ──────────────────────────────
+      // Do NOT throw here. Continue the loop to try the next model,
+      // ensuring the full model pool is exhausted before surfacing an error.
+      console.warn(
+        `[Gemini] ✗ Model "${modelName}" failed (${reason}): ${err.message} — rotating to next model...`
+      );
 
-        if (attemptsLeft > 0) {
-          // Brief pause before retrying with the next model.
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
-      } else {
-        // ── Non-quota error → surface immediately ────────────────────────
-        console.error(`[Gemini] Non-quota error on model ${modelName}:`, err.message);
-        throw err;
+      currentModelIndex = nextIndex(currentModelIndex);
+      attemptsLeft--;
+
+      if (attemptsLeft > 0) {
+        // Brief pause before retrying with the next model.
+        const delay = isQuotaError(err) ? 1000 : 500;
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
   }
 
   // ── All models exhausted ──────────────────────────────────────────────────
+  console.error(`[Gemini] All ${totalModels} model(s) failed. Last error: ${lastError?.message}`);
   throw new Error(
-    "All Gemini models are currently at quota limit. Please try again later."
+    "Failed to generate questions. Please check your API key and try again."
   );
 };
 
