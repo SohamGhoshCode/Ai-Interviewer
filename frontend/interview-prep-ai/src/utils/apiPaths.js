@@ -21,6 +21,7 @@ export const API_PATHS = {
         GET_ALL: "/api/sessions/my-sessions", // Get all user sessions
         GET_ONE: (id) => `/api/sessions/${id}`, // Get session details with questions
         DELETE: (id) => `/api/sessions/${id}`, // Delete a session
+        GET_STATS: "/api/sessions/stats", // Get aggregated stats for the logged-in user
     },
 
     QUESTION: {

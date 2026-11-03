@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { LuPlus, LuBrainCircuit } from "react-icons/lu";
+import { LuPlus, LuBrainCircuit, LuLayoutList, LuBookOpen, LuPin, LuBriefcase } from "react-icons/lu";
 import { CARD_BG } from "../../utils/data";
 import toast from "react-hot-toast";
 import DashboardLayout from '../../components/layouts/DashboardLayout';
@@ -20,6 +20,12 @@ const Dashboard = () => {
   const [openCreateModal, setOpenCreateModal] = useState(false);
   const [sessions, setSessions] = useState([]);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const [stats, setStats] = useState({
+    totalSessions: 0,
+    totalQuestions: 0,
+    totalPinnedQuestions: 0,
+    rolesPracticed: [],
+  });
 
   const [openDeleteAlert, setOpenDeleteAlert] = useState({
     open: false,
@@ -32,6 +38,17 @@ const Dashboard = () => {
       setSessions(response.data);
     } catch (error) {
       console.error("Error fetching session data:", error);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const response = await axiosInstance.get(API_PATHS.SESSION.GET_STATS);
+      if (response.data?.success) {
+        setStats(response.data.stats);
+      }
+    } catch (error) {
+      console.error("Error fetching stats:", error);
     }
   };
 
@@ -48,6 +65,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchAllSessions();
+    fetchStats();
   }, []);
 
   // Ensure video loops perfectly
@@ -126,6 +144,58 @@ const Dashboard = () => {
                 <span className="text-white/40 text-[11px] tracking-wide uppercase mt-0.5">{stat.label}</span>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* ─── Stats Bar ─── */}
+        <section className="w-full bg-gradient-to-r from-gray-950 via-gray-900 to-gray-950 border-b border-white/10">
+          <div className="container mx-auto px-4 py-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                {
+                  icon: <LuLayoutList className="text-xl" />,
+                  label: "Total Sessions",
+                  value: stats.totalSessions,
+                  color: "text-blue-400",
+                  bg: "bg-blue-400/10",
+                },
+                {
+                  icon: <LuBookOpen className="text-xl" />,
+                  label: "Total Questions",
+                  value: stats.totalQuestions,
+                  color: "text-emerald-400",
+                  bg: "bg-emerald-400/10",
+                },
+                {
+                  icon: <LuPin className="text-xl" />,
+                  label: "Pinned Questions",
+                  value: stats.totalPinnedQuestions,
+                  color: "text-yellow-400",
+                  bg: "bg-yellow-400/10",
+                },
+                {
+                  icon: <LuBriefcase className="text-xl" />,
+                  label: "Roles Practiced",
+                  value: stats.rolesPracticed?.length || 0,
+                  color: "text-purple-400",
+                  bg: "bg-purple-400/10",
+                },
+              ].map((stat, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-4 bg-white/5 hover:bg-white/8 border border-white/10 rounded-2xl px-5 py-4 transition-all duration-200 animate-fade-in-up"
+                  style={{ animationDelay: `${i * 0.08}s`, opacity: 0 }}
+                >
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${stat.bg} ${stat.color} shrink-0`}>
+                    {stat.icon}
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-white leading-none">{stat.value}</p>
+                    <p className="text-white/40 text-xs mt-1 font-medium tracking-wide">{stat.label}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
